@@ -35,7 +35,10 @@ class PyVega:
         self.window.title(kwargs.get("title","PyVega"))
         w = kwargs.get("width",950)
         h = kwargs.get("height",720)
-        self.window.geometry("{}x{}".format(w,h))
+        # Let's also center the window
+        x = self.window.winfo_screenwidth() // 2 - w // 2
+        y = self.window.winfo_screenheight() // 2 - h // 2
+        self.window.geometry("{}x{}+{}+{}".format(w,h, x, y))
         
         # Setup the card list
         self.vegas = {

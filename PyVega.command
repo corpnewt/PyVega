@@ -33,8 +33,8 @@ class PyVega:
         # self.window.configure(background="gray9")
         self.window.resizable(False, False)
         self.window.title(kwargs.get("title","PyVega"))
-        w = kwargs.get("width",1400)
-        h = kwargs.get("height",1000)
+        w = kwargs.get("width",950)
+        h = kwargs.get("height",720)
         self.window.geometry("{}x{}".format(w,h))
         
         # Setup the card list
@@ -65,8 +65,8 @@ class PyVega:
         self.graph_bg_color = "gray15"
         self.graph_line_color = "gray25"
         self.graph_text = "gray49"
-        self.graph_w = 1300.0
-        self.graph_h = 500.0
+        self.graph_w = 900.0
+        self.graph_h = 300.0
         self.graph_xsteps = 8.0
         self.graph_ysteps = 21.0
         self.graph_xpad = 50.0
@@ -409,14 +409,15 @@ class PyVega:
             self.graph.create_line(x1, y1, x2, y2, fill=self.graph_line_color)
             # Draw the label
             self.graph.create_text(x1, self.get_y(0)+self.graph_ypad/2, fill=self.graph_text, text="P{}".format(z))
-        # Draw the horizontal lines
+        # Draw the horizontal lines - we're going to skip every other
         for z in range(int(self.graph_ysteps)):
             y1 = y2 = self.get_y(z*100)
             x1 = self.get_x(self.graph_xmin)
             x2 = self.get_x(self.graph_xmax)
             self.graph.create_line(x1, y1, x2, y2, fill=self.graph_line_color)
             # Draw the label
-            self.graph.create_text(self.get_x(0)-self.graph_xpad/2, y1, fill=self.graph_text, text="{}".format(z*100))
+            if z % 2 == 0:
+                self.graph.create_text(self.get_x(0)-self.graph_xpad/2, y1, fill=self.graph_text, text="{}".format(z*100))
 
         mem_c = {"color":self.memory_clock_color,"points":[]}
         cor_c = {"color":self.core_clock_color,"points":[]}

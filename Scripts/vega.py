@@ -1,4 +1,4 @@
-import json
+import json, base64, binascii
 
 class Vega:
     def __init__(self):
@@ -95,12 +95,50 @@ class Vega:
                 "P3cf": 1269
             }
         }
+        self.wx8200 = {
+            "hex": "A9020801005C00EB070000593000001B00400000000000000000000000power0008000000000000000000000000000002015C004002370294008F01B4001E017A008C00AD01000000006502000090009B025E0134018801F049020071020202000000000000080000000000000005000700030005000000000000000108P0cvP1cvP2cvP3cvP4cvP5cvP6cvP7cv0101P3mv01018403000660EA0000004019010001DC4A010002007701000390910100046CB00100060108P0cf00000080000000000000P1cf00010000000000000000P2cf00020000000000000000P3cf00030000000000000000P4cf00040000000000000000P5cf00050000000000000000P6cf00060000000000000000P7cf00070000000000000000000460EA0000004019010000DC4A010000905F0100000008286E0000002CC9000001F80B0100028038010003905F010004F491010005D0B0010006C0D401000700086C39000000245E000001FC85000002ACBC00000334D0000004686E0100050897010006ECA30100070001683C0100000104P0mf00000000P1mf00000000P2mf00010000P3mf000400000108009885000040B5000060EA000050C300000180BB000060EA0000940B010050C300000278FF000040190100B427010050C3000003B4270100DC4A0100DC4A010050C3000004DC4A0100905F0100905F010050C3000005905F010000770100905F010050C300000600770100909101000077010050C300000790910100909101000077010050C300000118000000000000000CsenFanfreeFandownFantempLine0A00540390019001900190019001900190010000000000020431minFanmaxFan07AA00AA00AA002C0100005B0069004A004A005F006400780064004000909297609600905500000000000000000000000000000000000202D4300000021060EA00000210",
+            "defaults": {
+                "P2mf": 700,
+                "P5cf": 1399,
+                "P4cf": 1348,
+                "tempLine": 80,
+                "Dev": 8200,
+                "downFan": 2200,
+                "freeFan": 2000,
+                "P3cf": 1269,
+                "P3mf": 1000,
+                "maxFan": 3400,
+                "P7cf": 1500,
+                "P6cf": 1440,
+                "P2cf": 1138,
+                "power": 0,
+                "minFan": 1100
+            }
+        }
+        self.wx9100 = {
+            "hex": "A2020801005C0086070000D92C00001B00480000000000000000000000power0008000000000000000000000000000002015C003B02320294008A01B4001E017A008C00A801000000005E0200009000940259012F018301F049020071020202000000000000080000000000000005000700030005000000000000000108P0cvP1cvP2cvP3cvP4cvP5cvP6cvP7cv0101P3mv01018403000660EA0000004019010001DC4A010002007701000390910100046CB00100060108P0cf00000080000000000000P1cf00010000000000000000P2cf00020000000000000000P3cf00030000000000000000P4cf00040000000000000000P5cf00050000000000000000P6cf00060000000000000000P7cf00070000000000000000000360EA000000401901000080380100000008286E0000002CC9000001F80B0100028038010003905F010004F491010005D0B0010006C0D401000700086C39000000245E000001FC85000002ACBC00000334D0000004686E0100050897010006ECA30100070001683C0100000104P0mf00000000P1mf00000000P2mf00020000P3mf000300000108009885000040B5000060EA000050C300000180BB000060EA0000940B010050C300000278FF000040190100B427010050C3000003B4270100DC4A0100DC4A010050C3000004DC4A0100905F0100905F010050C3000005905F010000770100905F010050C300000600770100909101000077010050C300000790910100909101000077010050C300000118000000000000000BsenFanfreeFandownFantempLine0A0054039001900190019001900190019001000000000002minFanmaxFan07AA00AA00AA002C0100005B0069004A004A005F006400780064004000909297609600905500000000000000000000000000000000000202D4300000021060EA00000210",
+            "defaults": {
+                "power": 0,
+                "P7cf": 1500,
+                "P5cf": 1399,
+                "P4cf": 1348,
+                "P6cf": 1440,
+                "tempLine": 80,
+                "P2cf": 1138,
+                "Dev": 9100,
+                "downFan": 2000,
+                "freeFan": 2000,
+                "P3cf": 1269
+            }
+        }
         self.types = {
             "vega64":"Vega 64",
             "vega56":"Vega 56",
             "vegafe":"Vega FE",
             "vega64_water":"Vega 64 Liquid Cooled",
-            "vegafe_water":"Vega FE Liquid Cooled"
+            "vegafe_water":"Vega FE Liquid Cooled",
+            "wx8200":"Radeon Pro WX 8200",
+            "wx9100":"Radeon Pro WX 9100"
         }
         self.times = [ # Hex length = 6
             "cf",
@@ -114,6 +152,38 @@ class Vega:
             "power"
         ]
         self.selected = {}
+
+    def compare_defaults(self, t = None, **kwargs):
+        # Takes a base64, hex, or ascii string, converts it to ascii if needed, walks each line, splitting by = and
+        # compares the values to the vega64, creating a dict of defaults that differ.
+        if not t:
+            return
+        d = kwargs.get("data_type","b").lower() # a = ascii, b = base64, h = hex
+        o = kwargs.get("output_type","json").lower() # json or dict
+        if d == "b":
+            t_ascii = base64.b64decode(t.encode("utf-8")).decode("utf-8")
+        elif d == "h":
+            t_ascii = binascii.unhexlify(t.encode("utf-8")).decode("utf-8")
+        else:
+            # Assume ascii
+            t_ascii = t
+        defaults = {}
+        for x in t_ascii.split("\n"):
+            try:
+                y,z = x.split("=")
+                z = int(z)
+            except:
+                continue
+            # Compare to the vega64
+            a = self.vega64["defaults"].get(y,None)
+            if z != a:
+                # they differ - add it
+                defaults[y] = z
+        if o == "dict":
+            return defaults
+        else:
+            # assume json
+            return json.dumps(defaults,indent=2)
 
     def select_type(self, t = None):
         if t == None:

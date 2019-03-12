@@ -46,7 +46,9 @@ class PyVega:
             "Vega 56" : "vega56",
             "Vega FE" : "vegafe",
             "Vega 64 Liquid Cooled" : "vega64_water",
-            "Vega FE Liquid Cooled" : "vegafe_water"
+            "Vega FE Liquid Cooled" : "vegafe_water",
+            "Radeon Pro WX 8200" : "wx8200",
+            "Radeon Pro WX 9100" : "wx9100"
         }
 
         # Setup the display list

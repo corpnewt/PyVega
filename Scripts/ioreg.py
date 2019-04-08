@@ -1,11 +1,39 @@
-import os, sys
-sys.path.append(os.path.abspath(os.path.dirname(os.path.realpath(__file__))))
-import run
+import os, run
 
 class IOReg:
     def __init__(self):
         self.ioreg = {}
         self.r = run.Run()
+
+    def _get_hex_addr(self,item):
+        # Attempts to reformat an item from NAME@X,Y to NAME@X000000Y
+        try:
+            name,addr = item.split("@")
+            cont,port = addr.split(",")
+            item = name+"@"+hex(int(port,16)+(int(cont,16)<<20)).replace("0x","")
+        except:
+            pass
+        return item
+
+    def _get_dec_addr(self,item):
+        # Attemps to reformat an item from NAME@X000000Y to NAME@X,Y
+        try:
+            name,addr = item.split("@")
+            port = int(addr,16) & 0xFFFF
+            cont = int(addr,16) >> 20 & 0xFFFF
+            item = name+"@"+hex(cont).replace("0x","")
+            if port:
+                item += ","+hex(port).replace("0x","")
+        except:
+            pass
+        return item
+
+    def get_ioreg(self,**kwargs):
+        force = kwargs.get("force",False)
+        plane = kwargs.get("plane","IOService")
+        if force or not self.ioreg.get(plane,None):
+            self.ioreg[plane] = self.r.run({"args":["ioreg", "-l", "-p", plane, "-w0"]})[0].split("\n")
+        return self.ioreg[plane]
 
     def get_devices(self,dev_list = None, **kwargs):
         force = kwargs.get("force",False)
@@ -28,6 +56,7 @@ class IOReg:
         force = kwargs.get("force",False)
         plane = kwargs.get("plane","IOService")
         isclass = kwargs.get("isclass",False)
+        parent = kwargs.get("parent",None)
         # Returns a list of all matched classes and their properties
         if not dev_search:
             return []
@@ -36,9 +65,17 @@ class IOReg:
         dev = []
         primed = False
         current = None
+        path = []
         search = dev_search if not isclass else "<class " + dev_search
         for line in self.ioreg[plane]:
+            if "<class " in line:
+                # Add each class entry to our path
+                path.append(line)
             if not primed and not search in line:
+                continue
+            # Should have a device - let's see if we need to check a parent
+            if parent and not parent in self._walk_path(path):
+                # Need a parent, and we don't have it - keep going
                 continue
             if not primed:
                 primed = True
@@ -61,9 +98,26 @@ class IOReg:
                 pass
         return dev
 
+    def _walk_path(self,path):
+        # Got a path - walk backward
+        out = []
+        prefix = None
+        # Work in reverse to find our path
+        for x in path[::-1]:
+            parts = x.split("+-o ")
+            if prefix == None or len(parts[0]) < len(prefix):
+                # Path length changed, must be parent?
+                item = parts[1].split("  ")[0]
+                prefix = parts[0]
+                out.append(self._get_hex_addr(item))
+        # Reverse the path
+        out = out[::-1]
+        return "/".join(out)
+
     def get_acpi_path(self, device, **kwargs):
         force = kwargs.get("force",False)
         plane = kwargs.get("plane","IOService")
+        parent = kwargs.get("parent",None)
         if not device:
             return ""
         if force or not self.ioreg.get(plane,None):
@@ -75,24 +129,18 @@ class IOReg:
             if "<class " in x:
                 path.append(x)
                 if device in x:
-                    found = True
-                    break
-        if not found:
-            return ""
-        # Got a path - walk backward
-        out = []
-        prefix = None
-        # Work in reverse to find our path
-        for x in path[::-1]:
-            parts = x.split("+-o ")
-            if prefix == None or len(parts[0]) < len(prefix):
-                # Path length changed, must be parent?
-                item = parts[1].split("  ")[0]
-                prefix = parts[0]
-                out.append(item)
-        # Reverse the path
-        out = out[::-1]
-        return "/".join(out)
+                    # Got our device - get the path walked
+                    test = self._walk_path(path)
+                    if parent:
+                        # Verify we have the parent in the path
+                        if parent in test:
+                            return test
+                        # Not in there - keep going
+                        continue
+                    # No parent check needed - return the test path
+                    return test
+        # Didn't find anything
+        return ""
 
     def get_device_path(self, device, **kwargs):
         path = self.get_acpi_path(device, **kwargs)

@@ -222,15 +222,19 @@ class PyVega:
         if not gpu_path:
             gpu_path = self.default_gpu_path
             defaulted_on_path = True
+        plist_is_oc = True # Default to OpenCore
+        if "DeviceProperties" in plist_data: pass # Check OC first to preserve on both found
+        elif "Devices" in plist_data: plist_is_oc = False # Must be a Clover plist
         # Now we walk our config and make sure we add whatever we need
-        plist_data = self.ensure(["Devices","Properties",gpu_path],plist_data)
-        if len(plist_data["Devices"]["Properties"][gpu_path]):
+        plist_data = self.ensure(["DeviceProperties","Add",gpu_path] if plist_is_oc else ["Devices","Properties",gpu_path],plist_data)
+        path_data = plist_data["DeviceProperties"]["Add"][gpu_path] if plist_is_oc else plist_data["Devices"]["Properties"][gpu_path]
+        if len(path_data):
             # We already have some values here
             if not mb.askyesno("Data Exists!", "Data already exists for {}, add anyway?".format(gpu_path)):
                 return
         # At this point - we should be ready to write!
         for x in self.config_values:
-            plist_data["Devices"]["Properties"][gpu_path][x] = self.config_values[x]
+            path_data[x] = self.config_values[x]
         # Should be done now - let's save it
         try:
             with open(f,"wb") as a:

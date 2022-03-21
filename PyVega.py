@@ -290,6 +290,8 @@ class PyVega:
         self.update()
 
     def spin_fan(self, fan):
+        try: assert fan["fan"].winfo_exists()
+        except: return # Doesn't exist, or root destroyed - bail.
         # Get speed first
         speed = self.settings["defaults"].get(fan["value"])
         # Speed is 200 rpm to 4900

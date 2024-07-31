@@ -31,7 +31,6 @@ class PyVega:
         self.v = vega.Vega()
         self.window = tk.Tk()
         # self.window.configure(background="gray9")
-        self.window.resizable(False, False)
         self.window.title(kwargs.get("title","PyVega"))
         w = kwargs.get("width",950)
         h = kwargs.get("height",720)
@@ -39,7 +38,7 @@ class PyVega:
         x = self.window.winfo_screenwidth() // 2 - w // 2
         y = self.window.winfo_screenheight() // 2 - h // 2
         self.window.geometry("{}x{}+{}+{}".format(w,h, x, y))
-        
+
         # Setup the card list
         self.vegas = {
             "Vega 64" : "vega64",
@@ -178,6 +177,8 @@ class PyVega:
 
         self.select_value(self.type_selected)
         self.update()
+        # Prevent the window from resizing using the event loop
+        self.window.after(0, lambda: self.window.resizable(False, False))
         self.window.mainloop()
 
     def ensure(self, path_list, dict_data):
